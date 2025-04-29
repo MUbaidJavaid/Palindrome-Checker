@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDA Palindrome Checker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            arabic: ['UthmanicHafs_v2-1'],
+            extraLight:['Poppins-ExtraLight'],
+            semiBold:['Poppins-SemiBold'],
+            popLight:['Poppins-Light'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    .stack-item {
+      transition: all 0.3s ease;
+      transform: translateY(0);
+    }
+    .stack-push {
+      animation: pushAnimation 0.5s forwards;
+    }
+    .stack-pop {
+      animation: popAnimation 0.5s forwards;
+    }
+    @keyframes pushAnimation {
+      from { transform: translateY(50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes popAnimation {
+      from { transform: translateY(0); opacity: 1; }
+      to { transform: translateY(-50px); opacity: 0; }
+    }
+    .state-highlight {
+      fill: #3b82f6;
+      stroke: #1d4ed8;
+      stroke-width: 2px;
+    }
+
+
+    @font-face {
+    font-family: 'UthmanicHafs_v2-1';
+    src: url('/font/UthmanicHafs_v2-1.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    }
+
+    @font-face {
+          font-family: 'Poppins-ExtraLight';
+          src: url('/font/Poppins-ExtraLight.ttf') format('truetype');
+          font-weight: normal;
+          font-style: normal;
+    }
+
+    @font-face {
+      font-family: 'Poppins-SemiBold';
+      src: url('/font/Poppins-SemiBold.ttf') format('truetype');
+      font-weight: bold;
+      font-style: normal;
+    }
+
+    @font-face {
+      font-family: 'Poppins-Light';
+      src: url('/font/Poppins-Light.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-popLight min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">PDA Palindrome Checker</h1>
+    <p class="text-gray-600 mb-6">Visualizing how a Pushdown Automaton validates palindromes</p>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Input and Controls -->
+      <div class="bg-white rounded-lg shadow-md p-6 lg:col-span-1">
+        <h2 class="text-xl font-semibold mb-4">Interactive PDA Simulator</h2>
+        
+        <div class="mb-4">
+          <label for="inputString" class="block text-sm font-medium text-gray-700 mb-1">Enter a string:</label>
+          <input type="text" id="inputString" 
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" 
+                 placeholder="e.g., racecar, 'A man, a plan...'">
+          <p class="mt-1 text-sm text-gray-500">Case-insensitive, ignores non-alphanumeric</p>
+        </div>
+        
+        <button id="validateBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+          Validate
+        </button>
+        <button id="stepBtn" class="ml-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
+          Step Through
+        </button>
+        <button id="resetBtn" class="ml-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
+          Reset
+        </button>
+        
+        <div id="result" class="mt-4 p-4 rounded hidden">
+          <h3 class="font-bold text-lg"></h3>
+          <p class="mt-1"></p>
+        </div>
+      </div>
+      
+      <!-- Visualization -->
+      <div class="bg-white rounded-lg shadow-md p-6 lg:col-span-1">
+        <h2 class="text-xl font-semibold mb-4">PDA Visualization</h2>
+        
+        <div class="mb-6">
+          <h3 class="font-medium mb-2">Current State: <span id="currentState" class="font-bold">q₀</span></h3>
+          <div class="flex justify-center ">
+            <svg id="stateDiagram" width="250" height="200" class="" viewBox="0 0 250 200">
+              <!-- States -->
+              <circle id="q0" cx="50" cy="100" r="20" stroke="black" stroke-width="2" fill="white" />
+              <text x="50" y="105" text-anchor="middle" font-size="14">q₀</text>
+              
+              <circle id="q1" cx="150" cy="100" r="20" stroke="black" stroke-width="2" fill="white" />
+              <text x="150" y="105" text-anchor="middle" font-size="14">q₁</text>
+              
+              <circle id="q2" cx="150" cy="180" r="20" stroke="black" stroke-width="2" fill="white" />
+              <text x="150" y="185" text-anchor="middle" font-size="14">q₂</text>
+              
+              <!-- Transitions -->
+              <path d="M70,100 Q100,70 130,100" stroke="black" stroke-width="1" fill="none" />
+              <text x="100" y="80" text-anchor="middle" font-size="12">a,ε→a</text>
+              <text x="100" y="90" text-anchor="middle" font-size="12">b,ε→b</text>
+              
+              <path d="M150,120 Q150,150 150,160" stroke="black" stroke-width="1" fill="none" />
+              <text x="160" y="140" text-anchor="middle" font-size="12">a,a→ε</text>
+              <text x="160" y="150" text-anchor="middle" font-size="12">b,b→ε</text>
+              
+              <path d="M130,100 Q180,140 150,160" stroke="black" stroke-width="1" fill="none" />
+              <text x="170" y="120" text-anchor="middle" font-size="12">ε,$→ε</text>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <h3 class="font-medium mb-2">Input Tape</h3>
+          <div id="inputTape" class="flex justify-center space-x-1 mb-2"></div>
+          <div id="tapePointer" class="text-center text-blue-600 font-bold">↑</div>
+        </div>
+      </div>
+      
+      <!-- Stack Visualization -->
+      <div class="bg-white rounded-lg shadow-md p-6 lg:col-span-1">
+        <h2 class="text-xl font-semibold mb-4">Stack Operations</h2>
+        
+        <div class="mb-4">
+          <h3 class="font-medium mb-2">Stack Contents</h3>
+          <div id="stack" class="border-2 border-gray-300 rounded-md p-4 h-64 flex flex-col-reverse items-center space-y-1">
+            <div class="stack-item bg-gray-200 w-12 h-12 flex items-center justify-center rounded-full text-lg font-bold">$</div>
+          </div>
+        </div>
+        
+        <div class="mt-4">
+          <h3 class="font-medium mb-2">Operation Log</h3>
+          <div id="operationLog" class="border border-gray-200 rounded-md p-2 h-32 overflow-y-auto text-sm">
+            <p class="text-gray-500">Operations will appear here...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Theory Section -->
+    <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">Theory: PDA for Palindromes</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="prose">
+          <h3 class="font-medium text-lg">Why PDAs Are Needed</h3>
+          <p>
+            Finite Automata (FA) cannot recognize palindromes because they lack memory. 
+            To verify a palindrome, we need to remember the first half of the string 
+            to compare with the second half. PDAs extend FAs with a stack, providing 
+            the necessary memory capability.
+          </p>
+          
+          <h3 class="font-medium text-lg mt-4">PDA Formal Definition</h3>
+          <div class="bg-gray-100 p-4 rounded-md">
+            <p><strong>States (Q):</strong> {q₀, q₁, q₂}</p>
+            <p><strong>Input alphabet (Σ):</strong> Any alphanumeric character</p>
+            <p><strong>Stack alphabet (Γ):</strong> Σ ∪ {$} ($ = stack bottom)</p>
+            <p><strong>Transition function (δ):</strong></p>
+            <ul class="list-disc pl-5">
+              <li>q₀ → q₀: a,ε→a (push a)</li>
+              <li>q₀ → q₁: ε,ε→ε (switch to compare)</li>
+              <li>q₁ → q₁: a,a→ε (pop and match)</li>
+              <li>q₁ → q₂: ε,$→ε (accept)</li>
+            </ul>
+            <p><strong>Start state:</strong> q₀</p>
+            <p><strong>Accept state:</strong> q₂</p>
+          </div>
+        </div>
+        
+        <div class="prose">
+          <h3 class="font-medium text-lg">Algorithm Steps</h3>
+          <ol class="list-decimal pl-5 space-y-2">
+            <li><strong>Input Cleaning:</strong> Convert to lowercase and remove non-alphanumeric characters</li>
+            <li><strong>Push Phase (q₀):</strong> Push first half of characters onto stack</li>
+            <li><strong>Compare Phase (q₁):</strong> For odd lengths, skip middle character</li>
+            <li><strong>Pop & Match:</strong> Pop from stack and compare with second half</li>
+            <li><strong>Acceptance (q₂):</strong> If stack only contains $, accept as palindrome</li>
+          </ol>
+          
+          <h3 class="font-medium text-lg mt-4">Example Test Cases</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-green-50 p-2 rounded border border-green-200">
+              <p class="font-medium">Valid Palindromes</p>
+              <ul class="list-disc pl-5 text-sm">
+                <li>"racecar"</li>
+                <li>"A man, a plan..."</li>
+                <li>"abba"</li>
+              </ul>
+            </div>
+            <div class="bg-red-50 p-2 rounded border border-red-200">
+              <p class="font-medium">Invalid</p>
+              <ul class="list-disc pl-5 text-sm">
+                <li>"hello"</li>
+                <li>"abc123"</li>
+                <li>"palindrome"</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const inputString = document.getElementById('inputString');
+      const validateBtn = document.getElementById('validateBtn');
+      const stepBtn = document.getElementById('stepBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const resultDiv = document.getElementById('result');
+      const currentState = document.getElementById('currentState');
+      const inputTape = document.getElementById('inputTape');
+      const tapePointer = document.getElementById('tapePointer');
+      const stack = document.getElementById('stack');
+      const operationLog = document.getElementById('operationLog');
+      const stateDiagram = document.getElementById('stateDiagram');
+      
+      let pda = {
+        originalInput: '',
+        cleanedInput: '',
+        position: 0,
+        stack: ['$'],
+        state: 'q0',
+        isProcessing: false,
+        isComplete: false,
+        isAccepted: false,
+        operations: []
+      };
+      
+      // Initialize visualization
+      function resetVisualization() {
+        inputTape.innerHTML = '';
+        tapePointer.style.display = 'none';
+        stack.innerHTML = '<div class="stack-item bg-gray-200 w-12 h-12 flex items-center justify-center rounded-full text-lg font-bold">$</div>';
+        operationLog.innerHTML = '<p class="text-gray-500">Operations will appear here...</p>';
+        highlightState('q0');
+        currentState.textContent = 'q₀';
+        resultDiv.classList.add('hidden');
+        pda = {
+          originalInput: '',
+          cleanedInput: '',
+          position: 0,
+          stack: ['$'],
+          state: 'q0',
+          isProcessing: false,
+          isComplete: false,
+          isAccepted: false,
+          operations: []
+        };
+      }
+      
+      // Clean input string
+      function cleanInput(str) {
+        return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+      }
+      
+      // Highlight current state in diagram
+      function highlightState(state) {
+        // Reset all states
+        document.querySelectorAll('#stateDiagram circle').forEach(circle => {
+          circle.classList.remove('state-highlight');
+        });
+        
+        // Highlight current state
+        if (state === 'q0') document.getElementById('q0').classList.add('state-highlight');
+        if (state === 'q1') document.getElementById('q1').classList.add('state-highlight');
+        if (state === 'q2') document.getElementById('q2').classList.add('state-highlight');
+      }
+      
+      // Update input tape visualization
+      function updateInputTape(str, pos) {
+        inputTape.innerHTML = '';
+        for (let i = 0; i < str.length; i++) {
+          const symbol = document.createElement('div');
+          symbol.className = 'w-10 h-10 flex items-center justify-center border border-gray-300 rounded-full bg-white';
+          symbol.textContent = str[i];
+          inputTape.appendChild(symbol);
+        }
+        
+        if (pos >= 0 && pos < str.length) {
+          tapePointer.style.display = 'block';
+          tapePointer.style.marginLeft = `${pos * 44}px`;
+        } else {
+          tapePointer.style.display = 'none';
+        }
+      }
+      
+      // Update stack visualization
+      function updateStack(stackArray, operation = null) {
+        // Clear stack except bottom marker
+        const stackBottom = stack.firstElementChild;
+        stack.innerHTML = '';
+        stack.appendChild(stackBottom);
+        
+        // Add stack items (in reverse order for visualization)
+        for (let i = stackArray.length - 1; i >= 0; i--) {
+          if (stackArray[i] === '$') continue;
+          
+          const item = document.createElement('div');
+          item.className = 'stack-item bg-blue-500 w-12 h-12 flex items-center justify-center rounded-full text-white text-lg font-bold mt-1';
+          item.textContent = stackArray[i];
+          
+          // Add animation if operation specified
+          if (operation === 'push' && i === stackArray.length - 1) {
+            item.classList.add('stack-push');
+          } else if (operation === 'pop') {
+            item.classList.add('stack-pop');
+            setTimeout(() => {
+              if (item.parentNode) stack.removeChild(item);
+            }, 500);
+          }
+          
+          stack.appendChild(item);
+        }
+      }
+      
+      // Log operation
+      function logOperation(message) {
+        const entry = document.createElement('p');
+        entry.className = 'py-1 border-b border-gray-100 last:border-0';
+        entry.textContent = message;
+        operationLog.appendChild(entry);
+        operationLog.scrollTop = operationLog.scrollHeight;
+        pda.operations.push(message);
+      }
+      
+      // Process one step of the PDA
+      function processStep() {
+        if (pda.isComplete) return;
+        
+        pda.isProcessing = true;
+        const currentSymbol = pda.cleanedInput[pda.position] || 'ε';
+        
+        if (pda.state === 'q0') {
+          // Push phase
+          if (pda.position < Math.floor(pda.cleanedInput.length / 2)) {
+            // Push symbol onto stack
+            pda.stack.push(currentSymbol);
+            logOperation(`State q₀: Pushing '${currentSymbol}' to stack`);
+            updateStack(pda.stack, 'push');
+            pda.position++;
+            updateInputTape(pda.cleanedInput, pda.position);
+          } else {
+            // Move to compare state
+            pda.state = 'q1';
+            highlightState('q1');
+            currentState.textContent = 'q₁';
+            logOperation(`Transition: Moving to state q₁ (compare phase)`);
+            
+            // Skip middle character for odd-length strings
+            if (pda.cleanedInput.length % 2 !== 0) {
+              logOperation(`Odd length: Skipping middle character`);
+              pda.position++;
+              updateInputTape(pda.cleanedInput, pda.position);
+            }
+          }
+        } else if (pda.state === 'q1') {
+          // Compare phase
+          if (pda.position < pda.cleanedInput.length) {
+            const stackTop = pda.stack.pop();
+            const inputChar = pda.cleanedInput[pda.position];
+            
+            if (stackTop === inputChar) {
+              // Match - continue
+              logOperation(`State q₁: Popped '${stackTop}', matches input '${inputChar}'`);
+              updateStack(pda.stack, 'pop');
+              pda.position++;
+              updateInputTape(pda.cleanedInput, pda.position);
+            } else {
+              // Mismatch - reject
+              pda.isComplete = true;
+              pda.isAccepted = false;
+              logOperation(`State q₁: Mismatch! Popped '${stackTop}', got '${inputChar}' → REJECT`);
+              updateStack(pda.stack, 'pop');
+              showResult(false);
+            }
+          } else {
+            // End of input - check stack
+            const stackTop = pda.stack.pop();
+            if (stackTop === '$') {
+              // Accept
+              pda.state = 'q2';
+              pda.isComplete = true;
+              pda.isAccepted = true;
+              logOperation(`State q₁: Stack has only '$' → ACCEPT`);
+              updateStack(pda.stack, 'pop');
+              highlightState('q2');
+              currentState.textContent = 'q₂ (accept)';
+              showResult(true);
+            } else {
+              // Reject
+              pda.isComplete = true;
+              pda.isAccepted = false;
+              logOperation(`State q₁: Stack has '${stackTop}' → REJECT`);
+              updateStack(pda.stack, 'pop');
+              showResult(false);
+            }
+          }
+        }
+      }
+      
+      // Show final result
+      function showResult(isPalindrome) {
+        resultDiv.classList.remove('hidden');
+        
+        if (isPalindrome) {
+          resultDiv.className = 'mt-4 p-4 rounded bg-green-100 border-l-4 border-green-400';
+          resultDiv.querySelector('h3').textContent = 'Accepted!';
+          resultDiv.querySelector('p').textContent = `"${pda.originalInput}" is a palindrome (after cleaning: "${pda.cleanedInput}")`;
+          logOperation(`Final Result: Input is a valid palindrome`);
+        } else {
+          resultDiv.className = 'mt-4 p-4 rounded bg-red-100 border-l-4 border-red-400';
+          resultDiv.querySelector('h3').textContent = 'Rejected!';
+          resultDiv.querySelector('p').textContent = `"${pda.originalInput}" is not a palindrome`;
+          logOperation(`Final Result: Input is NOT a palindrome`);
+        }
+      }
+      
+      // Validate entire string at once
+      function validatePalindrome() {
+        const str = inputString.value.trim();
+        
+        // Clean input
+        const cleaned = cleanInput(str);
+        if (cleaned.length === 0) {
+          alert('Please enter a valid string (at least one alphanumeric character)');
+          return;
+        }
+        
+        resetVisualization();
+        pda.originalInput = str;
+        pda.cleanedInput = cleaned;
+        updateInputTape(cleaned, 0);
+        logOperation(`Input: "${str}" → Cleaned: "${cleaned}"`);
+        
+        // Process all steps automatically with delay for visualization
+        const totalSteps = cleaned.length + 3; // Account for stack operations
+        let stepCount = 0;
+        
+        const interval = setInterval(() => {
+          processStep();
+          stepCount++;
+          
+          if (pda.isComplete || stepCount >= totalSteps) {
+            clearInterval(interval);
+          }
+        }, 1000);
+      }
+      
+      // Step through manually
+      function stepThrough() {
+        const str = inputString.value.trim();
+        
+        if (!pda.isProcessing && !pda.isComplete) {
+          // First step - initialize
+          const cleaned = cleanInput(str);
+          if (cleaned.length === 0) {
+            alert('Please enter a valid string (at least one alphanumeric character)');
+            return;
+          }
+          
+          pda.originalInput = str;
+          pda.cleanedInput = cleaned;
+          updateInputTape(cleaned, 0);
+          logOperation(`Input: "${str}" → Cleaned: "${cleaned}"`);
+          pda.isProcessing = true;
+        }
+        
+        processStep();
+      }
+      
+      // Event listeners
+      validateBtn.addEventListener('click', validatePalindrome);
+      stepBtn.addEventListener('click', stepThrough);
+      resetBtn.addEventListener('click', resetVisualization);
+      
+      // Initialize
+      resetVisualization();
+    });
+  </script>
+</body>
+</html>
